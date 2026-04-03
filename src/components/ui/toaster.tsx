@@ -1,0 +1,1 @@
+export const Toaster = () => <div id="toaster" className="fixed bottom-4 right-4 z-50" />;
