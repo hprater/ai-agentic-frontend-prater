@@ -9,7 +9,7 @@ import { SidebarProvider } from './context/SidebarContext';
 import { AgentProvider } from './context/AgentContext';
 
 // Components & UI
-import { Toaster } from './components/ui/toaster';
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from './components/ui/tooltip';
 import MainLayout from './components/layout/MainLayout';
 

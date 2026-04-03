@@ -1,30 +1,72 @@
 import { useParams } from 'react-router-dom';
 import ChatInterface from '@/components/chat/ChatInterface';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const SpecialistView = () => {
+    // 1. Hook into the URL parameter we set in App.tsx
     const { agentId } = useParams<{ agentId: string }>();
 
-    // Map the URL ID to a friendly display name
-    const agentNames: Record<string, string> = {
-        'amplify': 'Amplify Deploy Specialist',
-        'aws': 'AWS Cloud Specialist',
-        'google': 'Google Cloud Specialist',
-    };
-
-    const displayName = agentNames[agentId || ''] || 'Unknown Specialist';
+    // 2. Format the name for the display (e.g., 'aws' -> 'AWS')
+    const displayId = agentId || 'agent';
+    const formattedName = displayId.charAt(0).toUpperCase() + displayId.slice(1);
 
     return (
-        <div className="flex flex-col h-full p-4">
-            <header className="mb-6">
-                <h1 className="text-2xl font-bold tracking-tight">{displayName}</h1>
-                <p className="text-muted-foreground">
-                    Direct secure link to the {agentId} specialist agent.
+        /* pt-16 to clear the Navbar, space-y-8 to match Dashboard */
+        <div className="space-y-8 pt-16 pb-12 animate-in fade-in duration-700">
+
+            {/* Header Section: Identical to CISO Dashboard */}
+            <header className="text-center space-y-2">
+                <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-500 uppercase">
+                    {formattedName} Specialist
+                </h1>
+                <p className="text-slate-400 max-w-2xl mx-auto">
+                    Secure interface for {formattedName} orchestration and autonomous tasking.
                 </p>
             </header>
 
-            <div className="flex-1 border rounded-lg bg-background overflow-hidden">
-                {/* Pass the agentId so the chat knows which backend to hit */}
-                <ChatInterface targetAgent={agentId || 'unknown'} />
+            {/* Main Grid: 8/4 Split (Total 12 columns) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+                {/* THE CHAT BOX: Locked at 650px to match Dashboard exactly */}
+                <div className="lg:col-span-8 h-[650px] flex flex-col">
+                    <ChatInterface key={agentId} targetAgent={displayId.toLowerCase()} />
+                </div>
+
+                {/* SIDEBAR: Status Cards */}
+                <div className="lg:col-span-4 space-y-6">
+                    <Card className="liquid-glass border-white/10 bg-white/5 backdrop-blur-md">
+                        <CardHeader>
+                            <CardTitle className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">
+                                Agent Status
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-slate-300">Identity</span>
+                                <span className="text-xs font-mono text-blue-400">{displayId.toUpperCase()}_v1</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-slate-300">Node Status</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                    </span>
+                                    <span className="text-emerald-400 text-xs font-bold uppercase tracking-widest">ACTIVE</span>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="liquid-glass border-white/10 bg-white/5 opacity-60">
+                        <CardContent className="pt-6">
+                            <p className="text-[10px] font-mono text-slate-500 text-center uppercase tracking-widest leading-relaxed">
+                                Secure Enclave // {displayId.toUpperCase()} <br/>
+                                Uplink Status: Nominal
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         </div>
     );
