@@ -1,9 +1,9 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Contexts
 import { ThemeProvider } from './context/ThemeContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { UserProvider } from './context/UserContext';
 import { SidebarProvider } from './context/SidebarContext';
 import { AgentProvider } from './context/AgentContext';
@@ -23,17 +23,56 @@ import NotFound from './pages/NotFound';
 const queryClient = new QueryClient();
 
 /**
+ * A wrapper component that redirects to login if the user is not authenticated.
+ */
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+    const { user, loading } = useAuth();
+    const location = useLocation();
+
+    if (loading) {
+        return (
+            <div className="h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4">
+                <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+                <div className="text-blue-500 font-mono text-xs uppercase tracking-[0.3em] animate-pulse">
+                    Synchronizing Secure Tunnel...
+                </div>
+            </div>
+        );
+    }
+
+    if (!user) {
+        // Redirect them to /login, but save the current location they were trying to go to
+        return <Navigate to="/login" state={{ from: location }} replace />;
+    }
+
+    return <>{children}</>;
+};
+
+/**
  * RouterContent defines the actual page hierarchy.
- * It is separated so it can use hooks from the Providers above it.
  */
 const RouterContent = () => {
+    const { user, loading } = useAuth();
+
     return (
         <Routes>
-            {/* Public Routes */}
-            <Route path="/login" element={<Login />} />
+            {/* Public Routes:
+                If already logged in, redirect away from login to dashboard
+            */}
+            <Route
+                path="/login"
+                element={user && !loading ? <Navigate to="/dashboard" replace /> : <Login />}
+            />
 
-            {/* Protected Layout: Everything inside here uses MainLayout (Sidebar/Navbar) */}
-            <Route path="/" element={<MainLayout />}>
+            {/* Protected Layout: Everything inside here requires a valid Firebase Session */}
+            <Route
+                path="/"
+                element={
+                    <ProtectedRoute>
+                        <MainLayout />
+                    </ProtectedRoute>
+                }
+            >
                 {/* Default to Dashboard */}
                 <Route index element={<Navigate to="/dashboard" replace />} />
 
@@ -55,8 +94,9 @@ const RouterContent = () => {
 const App = () => {
     return (
         <QueryClientProvider client={queryClient}>
-            <BrowserRouter> {/* Moved up to ensure Auth/Theme can use navigation hooks */}
+            <BrowserRouter>
                 <ThemeProvider>
+                    {/* Ensure AuthProvider is high enough to cover the whole RouterContent */}
                     <AuthProvider>
                         <UserProvider>
                             <AgentProvider>
