@@ -1,41 +1,47 @@
+import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
+import { SidebarProvider } from '../../context/SidebarContext'; // Adjust path to your context file
 
-const MainLayout = () => {
+/**
+ * We wrap the internal layout in the Provider so that
+ * both Sidebar and Navbar can access 'isOpen' and 'toggle'.
+ */
+const MainLayout: React.FC = () => {
     return (
-        /* 1. WRAPPER: Full screen, black background */
-        <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-950 text-slate-50 font-sans">
+        <SidebarProvider>
+            <div className="h-screen w-full flex overflow-hidden bg-slate-950 text-slate-50 font-sans">
 
-            {/* 2. NAVBAR: Stays at the top.
-             Ensure Navbar.tsx does NOT have 'absolute' or 'fixed'!
-      */}
-            <Navbar />
-
-            {/* 3. APP BODY: This area takes up all space BELOW the Navbar */}
-            <div className="flex flex-1 overflow-hidden">
-
-                {/* 4. SIDEBAR: Sits on the left */}
+                {/* 1. SIDEBAR: Sits on the far left.
+                  Internal to Sidebar.tsx, you should now use const { isOpen } = useSidebar();
+                */}
                 <Sidebar />
 
-                {/* 5. MAIN CONTENT: Sits to the right of the Sidebar */}
-                <main className="flex-1 overflow-y-auto relative bg-slate-950/20">
+                {/* 2. CONTENT WRAPPER: This flex container is the "sibling" to the Sidebar.
+                  It will expand and contract automatically as the Sidebar's width changes.
+                */}
+                <div className="flex flex-col flex-1 min-w-0 overflow-hidden relative">
 
-                    {/* THE "BREATHING ROOM" FIX:
-              We add a container with a huge top padding (pt-12)
-              to ensure the 'CISO Command' title is pushed down.
-          */}
-                    <div className="max-w-7xl mx-auto p-6 lg:p-12 pt-12 lg:pt-16 relative z-10">
+                    {/* 3. NAVBAR: Now nested inside the content wrapper.
+                      It starts exactly where the sidebar ends.
+                    */}
+                    <Navbar />
 
-                        {/* Background Glows */}
-                        <div className="absolute top-[-10%] left-[10%] w-[40%] h-[40%] rounded-full bg-blue-500/10 blur-[120px] pointer-events-none -z-10" />
+                    {/* 4. MAIN SCROLL AREA: Everything else below the navbar.
+                    */}
+                    <main className="flex-1 overflow-y-auto relative bg-slate-950/20 custom-scrollbar">
+                        <div className="max-w-7xl mx-auto p-6 lg:p-12 pt-12 lg:pt-16 relative z-10">
 
-                        {/* This is where CisoDashboard.tsx renders */}
-                        <Outlet />
-                    </div>
-                </main>
+                            {/* Background Glows */}
+                            <div className="absolute top-[-10%] left-[10%] w-[40%] h-[40%] rounded-full bg-blue-500/10 blur-[120px] pointer-events-none -z-10" />
+
+                            <Outlet />
+                        </div>
+                    </main>
+                </div>
             </div>
-        </div>
+        </SidebarProvider>
     );
 };
 

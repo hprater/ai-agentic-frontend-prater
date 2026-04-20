@@ -30,8 +30,8 @@ const CisoDashboard = () => {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="flex justify-between items-center">
-                                <span className="text-sm">Active Agents</span>
-                                <span className="px-2 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs font-bold border border-blue-500/30">04</span>
+                                <span className="text-sm">Agents in System</span>
+                                <span className="px-2 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs font-bold border border-blue-500/30">05</span>
                             </div>
                             <div className="flex justify-between items-center">
                                 <span className="text-sm">System Health</span>

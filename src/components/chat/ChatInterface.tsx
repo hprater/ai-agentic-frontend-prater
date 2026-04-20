@@ -65,8 +65,15 @@ const ChatInterface = ({ targetAgent }: { targetAgent: string }) => {
             // --- DEEP PARSING LOGIC ---
             const taskResult = data.result;
             const state = taskResult?.status?.state;
-            const assistantText = taskResult?.status?.message?.parts?.[0]?.text
-                || "Uplink confirmed, no text returned.";
+
+            // 1. Check for the final response in artifacts (Standard A2A)
+            // 2. Fallback to status message (Protocol standard)
+            // 3. Fallback to history (Last resort)
+            const assistantText =
+                taskResult?.artifacts?.[0]?.parts?.[0]?.text ||
+                taskResult?.status?.message?.parts?.[0]?.text ||
+                taskResult?.history?.filter((h: any) => h.role === 'agent')?.pop()?.parts?.[0]?.text ||
+                "Uplink confirmed, no text returned.";
 
             const assistantMessage: Message = {
                 role: 'assistant',

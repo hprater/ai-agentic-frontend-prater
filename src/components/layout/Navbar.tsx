@@ -1,15 +1,27 @@
+import React from 'react';
 import { Bell, Search, User, ShieldCheck, Activity } from 'lucide-react';
+import { useSidebar } from '../../context/SidebarContext'; // 1. Import your hook
 
-const Navbar = () => {
+const Navbar: React.FC = () => {
+    const { isOpen } = useSidebar();
+
     return (
-        <header className="h-16 w-full liquid-glass border-b border-white/10 z-30 flex items-center justify-between px-6 shrink-0">
+        <header className="
+            h-16 w-full
+            liquid-glass border-b border-white/10
+            z-30 flex items-center justify-between
+            px-6 shrink-0
+            transition-all duration-300 ease-in-out
+        ">
+            {/* 3. Added 'transition-all duration-300 ease-in-out' above */}
+
             {/* LEFT: Branding/System Identity */}
             <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                     <ShieldCheck className="w-6 h-6 text-blue-500" />
                     <span className="font-bold tracking-tighter text-xl uppercase">
-            Amplify <span className="text-blue-500">Fed</span>
-          </span>
+                        Amplify <span className="text-blue-500">Fed</span>
+                    </span>
                 </div>
                 <div className="h-6 w-[1px] bg-white/10 mx-2 hidden md:block" />
                 <div className="hidden md:flex items-center gap-2 text-xs font-mono text-slate-500">
@@ -18,7 +30,7 @@ const Navbar = () => {
                 </div>
             </div>
 
-            {/* CENTER: Global Search (Command Palette Style) */}
+            {/* CENTER: Global Search */}
             <div className="hidden lg:flex flex-1 max-w-md mx-8">
                 <div className="w-full relative group">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-blue-400 transition-colors" />

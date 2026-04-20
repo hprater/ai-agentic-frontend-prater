@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
     ShieldCheck,
-    Cpu,
+    Cog,
     Cloud,
     Terminal,
     PanelLeft,
@@ -17,35 +17,35 @@ const Sidebar = () => {
 
     const navItems = [
         { name: 'CISO Command', path: '/dashboard', icon: ShieldCheck },
-        { name: 'Amplify Specialist', path: '/specialist/amplify', icon: Cpu },
-        { name: 'AWS Specialist', path: '/specialist/aws', icon: Cloud },
-        { name: 'Google Specialist', path: '/specialist/google', icon: Cloud },
+        { name: 'Software Department', path: '/specialist/software', icon: Cloud },
+        { name: 'MCSWF Scorecard', path: '/specialist/mcswf', icon: Cog }
     ];
 
     return (
         <aside
-            className={`relative flex flex-col h-screen liquid-glass border-r border-white/10 z-20 transition-all duration-300 ${
+            className={`relative flex flex-col h-screen liquid-glass border-r border-white/10 z-20 transition-all duration-300 ease-in-out ${
                 isCollapsed ? 'w-20' : 'w-64'
             }`}
         >
-            {/* HEADER: Added h-20 to match Navbar and prevent cutoff */}
-            <div className="h-20 flex items-center justify-between px-4 shrink-0 border-b border-white/5">
-                {!isCollapsed && (
-                    <div className="flex items-center gap-3 animate-in fade-in duration-300">
-                        <div className="p-2 bg-blue-600/20 rounded-lg border border-blue-500/30">
+            {/* HEADER: Matches Navbar h-16 exactly */}
+            <div className="h-16 flex items-center justify-between px-4 shrink-0 border-b border-white/5">
+                {!isCollapsed ? (
+                    <div className="flex items-center gap-3 animate-in fade-in zoom-in-95 duration-300">
+                        <div className="p-1.5 bg-blue-600/20 rounded-lg border border-blue-500/30">
                             <Terminal className="w-4 h-4 text-blue-400" />
                         </div>
-                        <span className="font-bold text-sm tracking-tight text-white">
-              Amplify Fed
-            </span>
+                        <span className="font-bold text-sm tracking-tight text-white whitespace-nowrap">
+                            Agentic Systems
+                        </span>
                     </div>
+                ) : (
+                    /* Placeholder to keep the button right-aligned when collapsed */
+                    <div />
                 )}
 
                 <button
                     onClick={toggle}
-                    className={`p-2 rounded-md hover:bg-white/10 text-slate-400 transition-colors ${
-                        isCollapsed ? 'w-full flex justify-center' : ''
-                    }`}
+                    className="p-2 rounded-md hover:bg-white/10 text-slate-400 transition-colors"
                 >
                     {isCollapsed ? <PanelRight className="w-5 h-5" /> : <PanelLeft className="w-5 h-5" />}
                 </button>
@@ -59,36 +59,39 @@ const Sidebar = () => {
                             key={item.path}
                             to={item.path}
                             className={({ isActive }) =>
-                                `flex items-center gap-3 rounded-lg transition-all duration-200 ${
-                                    isCollapsed ? 'justify-center py-3' : 'px-3 py-2.5'
+                                `flex items-center gap-3 rounded-lg transition-all duration-200 group ${
+                                    isCollapsed ? 'justify-center px-0 py-3' : 'px-3 py-2.5'
                                 } ${
                                     isActive
                                         ? 'bg-blue-600/20 text-blue-100 border border-blue-500/30'
-                                        : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                                        : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
                                 }`
                             }
                         >
-                            <item.icon className={`shrink-0 ${isCollapsed ? 'w-6 h-6' : 'w-5 h-5'}`} />
+                            <item.icon className="shrink-0 w-5 h-5" />
                             {!isCollapsed && (
-                                <span className="text-sm font-medium truncate">
-                  {item.name}
-                </span>
+                                <span className="text-sm font-medium truncate animate-in fade-in slide-in-from-left-2 duration-300">
+                                    {item.name}
+                                </span>
                             )}
                         </NavLink>
                     ))}
                 </nav>
             </ScrollArea>
 
-            {/* FOOTER: System Status */}
+            {/* FOOTER */}
             <div className="p-4 border-t border-white/5 shrink-0">
-                <div className={`flex items-center gap-3 bg-slate-950/40 rounded-lg border border-white/5 ${
-                    isCollapsed ? 'justify-center py-3' : 'px-3 py-2'
+                <div className={`flex items-center gap-3 bg-slate-950/40 rounded-lg border border-white/5 transition-all duration-300 ${
+                    isCollapsed ? 'justify-center py-3 px-0' : 'px-3 py-2'
                 }`}>
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                    <div className="relative flex items-center justify-center">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                        <div className="absolute w-2 h-2 rounded-full bg-emerald-500 animate-ping opacity-75" />
+                    </div>
                     {!isCollapsed && (
-                        <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">
-              Secure
-            </span>
+                        <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest animate-in fade-in duration-300">
+                            Secure
+                        </span>
                     )}
                 </div>
             </div>
