@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Terminal, User, ShieldAlert } from 'lucide-react';
+import {
+    Send, Terminal, User, ShieldAlert, Copy, Check,
+    GitGraph, Cpu, History, Activity
+} from 'lucide-react';
 import { getBearerToken } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 
 interface Message {
     role: 'user' | 'assistant';
     content: string;
+    rawResponse?: any;
 }
 
 const ChatInterface = ({ targetAgent }: { targetAgent: string }) => {
@@ -13,11 +17,18 @@ const ChatInterface = ({ targetAgent }: { targetAgent: string }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [copiedId, setCopiedId] = useState<number | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isLoading]);
+
+    const handleCopy = async (content: string, index: number) => {
+        await navigator.clipboard.writeText(content);
+        setCopiedId(index);
+        setTimeout(() => setCopiedId(null), 2000);
+    };
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -34,65 +45,40 @@ const ChatInterface = ({ targetAgent }: { targetAgent: string }) => {
             if (!token) throw new Error('Authentication Required');
 
             const payload = {
-                jsonrpc: "2.0",
-                id: Date.now().toString(),
-                method: "message/send",
+                jsonrpc: "2.0", id: Date.now().toString(), method: "message/send",
                 params: {
-                    message: {
-                        role: "user",
-                        messageId: `msg_${Date.now()}`,
-                        parts: [{ text: currentInput }]
-                    },
-                    agent_id: "ciso_orchestrator"
+                    message: { role: "user", messageId: `msg_${Date.now()}`, parts: [{ text: currentInput }] },
+                    agent_id: targetAgent || "ciso_orchestrator"
                 }
             };
 
             const response = await fetch("https://orchestrator-nvqex3tt2a-uc.a.run.app/", {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
 
             const data = await response.json();
+            if (data.error) throw new Error(data.error.message || "Protocol Error");
 
-            if (data.error) {
-                throw new Error(data.error.message || "Protocol Error");
-            }
-
-            // --- DEEP PARSING LOGIC ---
             const taskResult = data.result;
-            const state = taskResult?.status?.state;
-
-            // 1. Check for the final response in artifacts (Standard A2A)
-            // 2. Fallback to status message (Protocol standard)
-            // 3. Fallback to history (Last resort)
             const assistantText =
                 taskResult?.artifacts?.[0]?.parts?.[0]?.text ||
                 taskResult?.status?.message?.parts?.[0]?.text ||
                 taskResult?.history?.filter((h: any) => h.role === 'agent')?.pop()?.parts?.[0]?.text ||
                 "Uplink confirmed, no text returned.";
 
-            const assistantMessage: Message = {
-                role: 'assistant',
-                content: state === 'failed' ? `⚠️ SYSTEM ALERT: ${assistantText}` : assistantText
-            };
-
-            setMessages((prev) => [...prev, assistantMessage]);
-
-        } catch (error: any) {
             setMessages((prev) => [...prev, {
                 role: 'assistant',
-                content: `🚨 UPLINK FAILURE: ${error.message}`
+                content: assistantText,
+                rawResponse: data
             }]);
+        } catch (error: any) {
+            setMessages((prev) => [...prev, { role: 'assistant', content: `🚨 UPLINK FAILURE: ${error.message}` }]);
         } finally {
             setIsLoading(false);
         }
     };
-
-    if (authLoading) return <div className="h-full flex items-center justify-center font-mono text-xs opacity-50">ESTABLISHING SECURE COMMS...</div>;
 
     return (
         <div className="flex flex-col h-full liquid-glass rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
@@ -104,28 +90,94 @@ const ChatInterface = ({ targetAgent }: { targetAgent: string }) => {
                     </div>
                 )}
 
-                {messages.map((msg, i) => (
-                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2`}>
-                        <div className={`flex gap-4 max-w-[85%] p-4 rounded-2xl ${
-                            msg.role === 'user'
-                                ? 'bg-blue-600/20 border border-blue-500/30 text-blue-50 ml-12'
-                                : msg.content.includes('🚨') || msg.content.includes('⚠️')
-                                    ? 'bg-red-950/30 border border-red-500/50 text-red-200 mr-12'
-                                    : 'bg-white/5 border border-white/10 text-slate-200 mr-12'
-                        }`}>
-                            <div className="shrink-0 mt-1">
-                                {msg.role === 'assistant' ? <Terminal className="w-5 h-5 text-blue-400" /> : <User className="w-5 h-5 text-slate-400" />}
+                {messages.map((msg, i) => {
+                    const isUser = msg.role === 'user';
+
+                    const usage = msg.rawResponse?.result?.metadata?.adk_usage_metadata;
+                    const status = msg.rawResponse?.result?.status;
+                    const handoffs = msg.rawResponse?.result?.history
+                        ?.filter((h: any) => h.parts?.[0]?.data?.name === "transfer_to_agent")
+                        .map((h: any) => h.parts[0].data.args.agent_name);
+
+                    return (
+                        <div key={i} className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2`}>
+                            <div className={`group relative flex flex-col max-w-[85%] rounded-2xl transition-all duration-200 ${
+                                isUser ? 'bg-blue-600/20 border border-blue-500/30 text-blue-50 ml-12' : 'bg-white/5 border border-white/10 text-slate-200 mr-12'
+                            }`}>
+
+                                {/* 1. TOP ACTION BAR (Agent) or COPY BUTTON (User) */}
+                                {!isUser && msg.rawResponse ? (
+                                    <div className="flex items-center gap-1 px-3 py-1.5 border-b border-white/5 bg-white/[0.02] opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {/* COPY */}
+                                        <button onClick={() => handleCopy(msg.content, i)} className="p-1.5 rounded-md hover:bg-white/10 text-slate-500 hover:text-blue-400 transition-colors">
+                                            {copiedId === i ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                                        </button>
+
+                                        {/* REASONING TRACE */}
+                                        <div className="relative group/tooltip">
+                                            <button className="p-1.5 rounded-md hover:bg-white/10 text-slate-500 hover:text-blue-400 transition-colors"><GitGraph className="w-3.5 h-3.5" /></button>
+                                            <div className="absolute bottom-full left-0 mb-2 hidden group-hover/tooltip:block z-50 liquid-glass p-3 rounded-lg border border-white/10 shadow-xl min-w-[200px] animate-in fade-in zoom-in-95">
+                                                <p className="text-[10px] font-mono text-blue-400 uppercase tracking-widest mb-1">Reasoning Trace</p>
+                                                <div className="text-[11px] font-sans text-slate-300 space-y-1">
+                                                    {handoffs?.length ? handoffs.map((h: string, idx: number) => (
+                                                        <div key={idx} className="flex items-center gap-2"><span className="text-blue-500">↳</span> {h}</div>
+                                                    )) : <span>Direct Execution</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* TOKEN USAGE */}
+                                        <div className="relative group/tooltip">
+                                            <button className="p-1.5 rounded-md hover:bg-white/10 text-slate-500 hover:text-blue-400 transition-colors"><Cpu className="w-3.5 h-3.5" /></button>
+                                            <div className="absolute bottom-full left-0 mb-2 hidden group-hover/tooltip:block z-50 liquid-glass p-3 rounded-lg border border-white/10 shadow-xl min-w-[180px] animate-in fade-in zoom-in-95">
+                                                <p className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest mb-1">Token Metrics</p>
+                                                <div className="text-[11px] font-mono text-slate-300 grid grid-cols-2 gap-x-4 gap-y-1">
+                                                    <span className="text-slate-500">Total:</span> <span>{usage?.totalTokenCount || 0}</span>
+                                                    <span className="text-slate-500">Prompt:</span> <span>{usage?.promptTokenCount || 0}</span>
+                                                    <span className="text-slate-500">Thoughts:</span> <span>{usage?.thoughtsTokenCount || 0}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* EXECUTION META */}
+                                        <div className="relative group/tooltip">
+                                            <button className="p-1.5 rounded-md hover:bg-white/10 text-slate-500 hover:text-blue-400 transition-colors"><History className="w-3.5 h-3.5" /></button>
+                                            <div className="absolute bottom-full left-0 mb-2 hidden group-hover/tooltip:block z-50 liquid-glass p-3 rounded-lg border border-white/10 shadow-xl min-w-[220px] animate-in fade-in zoom-in-95">
+                                                <p className="text-[10px] font-mono text-purple-400 uppercase tracking-widest mb-1">Uplink Status</p>
+                                                <div className="text-[11px] font-sans text-slate-300 space-y-1">
+                                                    <div className="flex justify-between"><span className="text-slate-500">State:</span> <span className="uppercase text-emerald-400 font-mono">{status?.state}</span></div>
+                                                    <div className="flex justify-between"><span className="text-slate-500">Timestamp:</span> <span>{status?.timestamp ? new Date(status.timestamp).toLocaleString() : 'N/A'}</span></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : isUser && (
+                                    <div className="absolute top-2 right-2">
+                                        <button onClick={() => handleCopy(msg.content, i)} className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md hover:bg-white/10 text-slate-500 transition-all">
+                                            {copiedId === i ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* 2. CONTENT SECTION */}
+                                <div className="flex gap-4 p-4">
+                                    <div className="shrink-0 mt-1">
+                                        {isUser ? <User className="w-5 h-5 text-slate-400" /> : <Terminal className="w-5 h-5 text-blue-400" />}
+                                    </div>
+                                    <div className={`text-sm leading-relaxed whitespace-pre-wrap font-sans ${isUser ? 'pr-8' : ''}`}>
+                                        {msg.content}
+                                    </div>
+                                </div>
                             </div>
-                            <div className="text-sm leading-relaxed whitespace-pre-wrap font-sans">{msg.content}</div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
 
                 {isLoading && (
                     <div className="flex justify-start animate-in fade-in">
                         <div className="bg-white/5 border border-white/10 p-4 rounded-2xl flex items-center gap-3">
-                            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></span>
-                            <span className="text-xs font-mono text-slate-500 uppercase tracking-tighter">Processing...</span>
+                            <Activity className="w-4 h-4 text-blue-500 animate-pulse" />
+                            <span className="text-xs font-mono text-slate-500 uppercase tracking-widest">Processing...</span>
                         </div>
                     </div>
                 )}
@@ -138,11 +190,10 @@ const ChatInterface = ({ targetAgent }: { targetAgent: string }) => {
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        className="flex-1 bg-transparent border-none outline-none px-3 text-sm text-slate-100 placeholder:text-slate-600"
-                        placeholder={`Transmit to ORCHESTRATOR...`}
-                        autoComplete="off"
+                        className="flex-1 bg-transparent outline-none px-3 text-sm text-slate-100 placeholder:text-slate-500"
+                        placeholder={`Transmit to ${targetAgent?.toUpperCase() || 'ORCHESTRATOR'}...`}
                     />
-                    <button type="submit" disabled={isLoading || !input.trim() || !user} className="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-lg active:scale-95 disabled:opacity-30">
+                    <button type="submit" disabled={isLoading || !input.trim()} className="bg-blue-600 text-white p-2.5 rounded-lg active:scale-95 disabled:opacity-30">
                         <Send className="w-4 h-4" />
                     </button>
                 </div>
